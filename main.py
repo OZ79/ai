@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import r2_score, root_mean_squared_error
+from sklearn.metrics import r2_score, root_mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 
 class Neuron:
@@ -123,27 +123,42 @@ class NeuralNetwork:
             self.updateWb(
                 self.layers[layerNum], gradients[layerNum], learning_rate)
 
-    def updateWb(self, layer: Layer, gradients,  learning_rate):
-        alpha = 0.9
+    def updateWb(self, layer: Layer, gradients, learning_rate):
+        momentum = 0.9
+        max_norm = 1.0
+
         for i, neuron in enumerate(layer.neurons):
-            delta_w = alpha * neuron.momentum + (1 - alpha) * learning_rate * gradients[i]
-            neuron.wb = neuron.wb - delta_w
-            neuron.momentum = delta_w
+
+            gradient = gradients[i]
+
+            norm = np.linalg.norm(gradient)
+
+            if norm > max_norm:
+                gradient = gradient * (max_norm / norm)
+
+            velocity = (
+                momentum * neuron.momentum
+                + learning_rate * gradient
+            )
+
+            neuron.wb -= velocity
+            neuron.momentum = velocity
 
 
 ######################################################################
 
 nn = NeuralNetwork(2)
-nn.add_layer(10,1)
-nn.add_layer(20,1)
+nn.add_layer(6)
+nn.add_layer(6)
+nn.add_layer(6)
 nn.add_layer(1,2)
 
 train_X = []
 train_y = []
 
-for _ in range(100):
-    x1 = np.random.randint(-20, 20)
-    x2 = np.random.randint(-20, 20)
+for _ in range(1500):
+    x1 = np.random.randint(-20, 21)
+    x2 = np.random.randint(-20, 21)
 
     train_X.append(
         np.array([x1, x2])
@@ -178,13 +193,17 @@ ax.set_title("Training loss")
 ax.grid()
 
 try:
-    for epoch in range(7000):
+    for epoch in range(3000):
 
         epoch_loss = 0.0
 
-        for x, y in zip(train_X_scaled, train_y_scaled):
+        indices = np.random.permutation(len(train_X_scaled))
+        for i in indices:
+            x = train_X_scaled[i]
+            y = train_y_scaled[i]
+
             nn.forward(x)
-            nn.backward(y, learning_rate=0.0001)
+            nn.backward(y, learning_rate=0.001)
 
             epoch_loss += nn.loss[-1]
 
@@ -249,13 +268,15 @@ y_true = np.array(y_true)
 
 r2 = r2_score(y_true, y_pred)
 rmse = root_mean_squared_error(y_true, y_pred)
+mae = mean_absolute_error(y_true, y_pred)
 
 print("R² =", r2)
 print("rmse =", rmse)
+print("MAE =", mae)
 
 results = []
 
-for _ in range(10):
+for _ in range(20):
     x1 = np.random.randint(-20, 20)
     x2 = np.random.randint(-20, 20)
 
