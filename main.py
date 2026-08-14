@@ -5,6 +5,7 @@ import numpy as np
 class Neuron:
     def __init__(self, weights_count: int, f_activation_n: int = 1):
         self.weights_count = weights_count
+        self.z = None
         self.output = None
         self.f_activation_n = f_activation_n
 
@@ -28,9 +29,13 @@ class Neuron:
 
     def forward(self, input_data:np.ndarray) -> float:
         input_extended = np.concatenate([input_data, [1]])
-        z = self.wb @ input_extended
-        self.output = self.f_activation(z)
+        self.z = self.wb @ input_extended
+        self.output = self.f_activation(self.z)
         return self.output
+
+    @property
+    def prim(self)-> float:
+        return self.f_activation_prim(self.z)
 
 
 class Layer:
@@ -43,6 +48,10 @@ class Layer:
     def forward(self, input_data:np.ndarray) -> np.ndarray:
         self.output = [self.neurons[n].forward(input_data) for n in range(0, self.neurons_count)]
         return self.output
+
+    @property
+    def prims(self)-> np.ndarray:
+        return [neuron.prim for neuron in self.neurons]
 
 
 class NeuralNetwork:
@@ -64,9 +73,22 @@ class NeuralNetwork:
         self.output = output
         return self.output
 
+    def backward(self, train_data:np.ndarray, learning_rate = 0.01):
+        layerNum = -1
+        layer = self.layers[layerNum]
+        if layerNum == -1:
+            delta = (self.output - train_data) * layer.prims
+        gradients = np.outer(delta, np.concatenate([self.layers[layerNum -1].output, [1]]))
+        self.updateWb(layer, gradients, learning_rate)
+
+    def updateWb(self, layer: Layer, gradients,  learning_rate):
+        for i, neuron in enumerate(layer.neurons):
+            neuron.wb =  neuron.wb - learning_rate * gradients[i]
+
 
 nn = NeuralNetwork(2)
 nn.addLayer(3)
 nn.addLayer(2)
 output = nn.forward(np.array([1, 2]))
-print(output)
+
+nn.backward(np.array([3, 3]))
