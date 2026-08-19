@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 from typing import Callable
 import numpy as np
 
@@ -6,8 +7,12 @@ import numpy as np
 # NEURON
 # ============================================================
 
+class ActivationFunc(Enum):
+    Relu = "Relu"
+    Linear = "Linear"
+
 class Neuron:
-    def __init__(self, weights_count: int, f_activation_n: int = 1):
+    def __init__(self, weights_count: int, f_activation_n: ActivationFunc = ActivationFunc.Linear):
         self.weights_count = weights_count
         self.z = None
         self.output = None
@@ -17,29 +22,29 @@ class Neuron:
 
     @property
     def f_activation(self) -> Callable[[float], float]:
-        def relu(z:float) -> float:
-            return max(0, z)
         def linear(z):
             return z
-        
-        if self.f_activation_n == 1:
-            return relu
-        elif self.f_activation_n == 2:
+        def relu(z:float) -> float:
+            return max(0, z)
+
+        if self.f_activation_n == ActivationFunc.Linear:
             return linear
+        elif self.f_activation_n == ActivationFunc.Relu:
+            return relu
 
         raise ValueError("Unknown activation")
 
     @property
     def f_activation_prim(self) -> Callable[[float], float]:
-        def relu_grad(z:float) -> float:
-                return 1.0 if z > 0 else 0.0
         def linear_prime(z):
             return 1.0
+        def relu_grad(z:float) -> float:
+            return 1.0 if z > 0 else 0.0
         
-        if self.f_activation_n == 1:
-            return relu_grad
-        elif self.f_activation_n == 2:
+        if self.f_activation_n == ActivationFunc.Linear:
             return linear_prime
+        elif self.f_activation_n == ActivationFunc.Relu:
+            return relu_grad
 
         raise ValueError("Unknown activation")
 
@@ -63,7 +68,7 @@ class Neuron:
 # ============================================================
 
 class Layer:
-    def __init__(self, inputs_count: int, neurons_count: int, f_activation_n: int = 1):
+    def __init__(self, inputs_count: int, neurons_count: int, f_activation_n: ActivationFunc = ActivationFunc.Linear):
         self.inputs_count = inputs_count
         self.neurons_count = neurons_count
         self.neurons = [
@@ -93,7 +98,7 @@ class NeuralNetwork:
         self.layers_count = None
         self.loss = []
 
-    def add_layer(self, neurons_count: int, f_activation_n=1):
+    def add_layer(self, neurons_count: int, f_activation_n: ActivationFunc = ActivationFunc.Linear):
         if not self.layers:
             self.layers.append(Layer(self.inputs_count, neurons_count, f_activation_n))
         else:
@@ -119,10 +124,10 @@ class NeuralNetwork:
                 layerNext =  self.layers[layerNum + 1]
                 delta = (np.array([neuron.wb[:-1] for neuron in layerNext.neurons]).T  @  delta) * layer.prims
             if layerNum == 0:
-                gradient = np.outer(delta, np.concatenate([self.input_data, [1]]))
+                input = np.concatenate([self.input_data, [1]])
             else:
-                gradient = np.outer(delta, np.concatenate([self.layers[layerNum -1].output, [1]]))
-
+                input = np.concatenate([self.layers[layerNum -1].output, [1]])
+            gradient = np.outer(delta, input)
             gradients[layerNum] = gradient
 
         for layerNum in range(self.layers_count):

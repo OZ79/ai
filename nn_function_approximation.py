@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, root_mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 
-from neural_network import NeuralNetwork
+from neural_network import ActivationFunc, NeuralNetwork
 
 if __name__ == "__main__":
 
@@ -34,12 +34,7 @@ if __name__ == "__main__":
     # ============================================================
 
     scaler = StandardScaler()
-
-    X_scaled = scaler.fit_transform(
-
-        X.reshape(-1, 1)
-
-    ).flatten()
+    X_scaled = scaler.fit_transform(X.reshape(-1, 1)).flatten()
 
     # ============================================================
     # 4. CREATE NEURAL NETWORK
@@ -51,7 +46,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     nn.add_layer(
         neurons_count=35,
-        f_activation_n=1       # ReLU
+        f_activation_n= ActivationFunc.Relu,
     )
 
     # ------------------------------------------------------------
@@ -59,22 +54,21 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     nn.add_layer(
         neurons_count=35,
-        f_activation_n=1       # ReLU
+        f_activation_n=ActivationFunc.Relu,
     )
 
     # ------------------------------------------------------------
     # Output layer
     # ------------------------------------------------------------
     nn.add_layer(
-        neurons_count=1,
-        f_activation_n=2       # Linear
+        neurons_count=1
     )
 
     # ============================================================
     # 5. TRAINING PARAMETERS
     # ============================================================
 
-    epochs = 500
+    epochs = 700
     learning_rate = 0.001
     update_every = 1
 
@@ -88,109 +82,43 @@ if __name__ == "__main__":
     plt.ion()
 
 
-    fig, axes = plt.subplots(
-
-        2,
-        1,
-
-        figsize=(8, 7)
-
-    )
+    fig, axes = plt.subplots(2,1,figsize=(8, 7))
 
 
     # ============================================================
     # GRAPH 1 — FUNCTION APPROXIMATION
     # ============================================================
 
-    axes[0].plot(
-
-        X,
-        y,
-
-        label="True function: sin(x)",
-
-        linewidth=2
-
-    )
-
+    axes[0].plot(X, y,label="True function: sin(x)",linewidth=2)
 
     # Початкова апроксимація
-    prediction_line, = axes[0].plot(
+    prediction_line, = axes[0].plot(X, np.zeros_like(y),label="Neural network",linewidth=2)
 
-        X,
+    axes[0].set_xlabel("x")
 
-        np.zeros_like(y),
+    axes[0].set_ylabel("y")
 
-        label="Neural network",
-
-        linewidth=2
-
-    )
-
-
-    axes[0].set_xlabel(
-        "x"
-    )
-
-    axes[0].set_ylabel(
-        "y"
-    )
-
-
-    axes[0].set_title(
-
-        f"Function Approximation — "
-        f"Epoch 0/{epochs}"
-
-    )
-
+    axes[0].set_title(f"Function Approximation — "f"Epoch 0/{epochs}")
 
     axes[0].legend()
 
-    axes[0].grid(
-        True
-    )
-
+    axes[0].grid(True)
 
     # ============================================================
     # GRAPH 2 — LOSS
     # ============================================================
 
-    loss_line, = axes[1].plot(
+    loss_line, = axes[1].plot([],[],linewidth=2)
 
-        [],
-        [],
+    axes[1].set_xlabel("Epoch")
 
-        linewidth=2
+    axes[1].set_ylabel("Loss")
 
-    )
+    axes[1].set_title("Training Loss")
 
+    axes[1].grid(True)
 
-    axes[1].set_xlabel(
-        "Epoch"
-    )
-
-    axes[1].set_ylabel(
-        "Loss"
-    )
-
-
-    axes[1].set_title(
-        "Training Loss"
-    )
-
-
-    axes[1].grid(
-        True
-    )
-
-
-    axes[1].set_xlim(
-
-        1,
-        epochs
-
-    )
+    axes[1].set_xlim(1,epochs)
 
 
     # ============================================================
@@ -204,325 +132,140 @@ if __name__ == "__main__":
     # 7. TRAINING
     # ============================================================
 
-    for epoch in range(
-        epochs
-    ):
-
-
+    for epoch in range(epochs):
         # --------------------------------------------------------
         # Shuffle training data
         # --------------------------------------------------------
 
-        indices = np.random.permutation(
-
-            len(X_scaled)
-
-        )
-
-
+        indices = np.random.permutation(len(X_scaled))
         epoch_loss = 0.0
-
 
         # --------------------------------------------------------
         # Train each sample
         # --------------------------------------------------------
 
         for i in indices:
-
-
             # ----------------------------------------------------
             # Input
             # ----------------------------------------------------
-
-            x = np.array([
-
-                X_scaled[i]
-
-            ])
-
+            x = np.array([X_scaled[i]])
 
             # ----------------------------------------------------
             # Target
             # ----------------------------------------------------
-
-            target = np.array([
-
-                y[i]
-
-            ])
-
+            target = np.array([y[i]])
 
             # ----------------------------------------------------
             # Forward
             # ----------------------------------------------------
-
-            prediction = nn.forward(
-
-                x
-
-            )
-
+            prediction = nn.forward(x)
 
             # ----------------------------------------------------
             # Loss
             # ----------------------------------------------------
-
             sample_loss = (
-
-                np.sum(
-
-                    (prediction - target) ** 2
-
-                )
-
-                * 0.5
-
-            )
-
-
+                np.sum((prediction - target) ** 2)* 0.5)
             epoch_loss += sample_loss
-
 
             # ----------------------------------------------------
             # Backward
             # ----------------------------------------------------
-
-            nn.backward(
-
-                target,
-
-                learning_rate
-
-            )
+            nn.backward(target,learning_rate)
 
 
         # --------------------------------------------------------
         # Mean epoch loss
         # --------------------------------------------------------
 
-        epoch_loss /= len(
+        epoch_loss /= len(X_scaled)
 
-            X_scaled
-
-        )
-
-
-        epoch_losses.append(
-
-            epoch_loss
-
-        )
+        epoch_losses.append(epoch_loss)
 
 
         # ========================================================
         # UPDATE GRAPH
         # ========================================================
 
-        if (
-
-            epoch % update_every == 0
-
-            or
-
-            epoch == epochs - 1
-
-        ):
-
-
+        if (epoch % update_every == 0 or epoch == epochs - 1):
             # ----------------------------------------------------
             # Current predictions
-            # ----------------------------------------------------
-
-            predictions = np.array([
-
-                nn.forward(
-
-                    np.array([x])
-
-                )[0]
-
-                for x in X_scaled
-
-            ])
-
+            # ---------------------------------------------------- 
+            predictions = np.array([nn.forward(np.array([x]))[0] for x in X_scaled])
 
             # ----------------------------------------------------
             # Update approximation
             # ----------------------------------------------------
-
-            prediction_line.set_ydata(
-
-                predictions
-
-            )
+            prediction_line.set_ydata(predictions)
 
 
             # ----------------------------------------------------
             # Update loss
-            # ----------------------------------------------------
-
+            # ---------------------------------------------------- 
             loss_line.set_data(
-
-                range(
-
-                    1,
-
-                    len(epoch_losses) + 1
-
-                ),
-
-                epoch_losses
-
-            )
-
+                range(1,len(epoch_losses) + 1),epoch_losses)
 
             # ----------------------------------------------------
             # Update loss Y axis
             # ----------------------------------------------------
-
-            max_loss = max(
-
-                epoch_losses
-
-            )
+            max_loss = max(epoch_losses)
 
 
             if max_loss > 0:
-
-                axes[1].set_ylim(
-
-                    0,
-
-                    max_loss * 1.1
-
-                )
-
+                axes[1].set_ylim(0,max_loss * 1.1)
 
             # ----------------------------------------------------
             # Update titles
             # ----------------------------------------------------
-
-            axes[0].set_title(
-
-                f"Function Approximation — "
-                f"Epoch {epoch + 1}/{epochs}"
-
-            )
-
-
-            axes[1].set_title(
-
-                f"Training Loss — "
-                f"{epoch_loss:.8f}"
-
-            )
-
+            axes[0].set_title(f"Function Approximation — "f"Epoch {epoch + 1}/{epochs}")
+            axes[1].set_title(f"Training Loss — "f"{epoch_loss:.8f}")
 
             # ----------------------------------------------------
             # Redraw existing window
             # ----------------------------------------------------
-
             fig.canvas.draw_idle()
-
             fig.canvas.flush_events()
 
             # ----------------------------------------------------
             # Give GUI time to update
             # ----------------------------------------------------
 
-            plt.pause(
-
-                0.001
-
-            )
+            plt.pause(0.001)
 
 
     # ============================================================
     # 8. TURN OFF INTERACTIVE MODE
     # ============================================================
-
     plt.ioff()
 
 
     # ============================================================
     # 9. FINAL PREDICTIONS
     # ============================================================
-
-    predictions = np.array([
-
-        nn.forward(
-
-            np.array([x])
-
-        )[0]
-
-        for x in X_scaled
-
-    ])
-
+    predictions = np.array([nn.forward(np.array([x]))[0] for x in X_scaled])
 
     # ============================================================
     # 10. METRICS
     # ============================================================
 
-    r2 = r2_score(
-
-        y,
-
-        predictions
-
-    )
+    r2 = r2_score(y,predictions)
 
 
-    rmse = root_mean_squared_error(
+    rmse = root_mean_squared_error(y,predictions)
 
-        y,
-
-        predictions
-
-    )
-
-
-    mae = mean_absolute_error(
-
-        y,
-
-        predictions
-
-    )
-
+    mae = mean_absolute_error(y, predictions)
 
     print()
 
-    print(
-        "================================"
-    )
+    print( "================================")
 
     print(
-        "FINAL RESULTS"
-    )
+        "FINAL RESULTS")
 
-    print(
-        "================================"
-    )
+    print("================================" )
 
+    print(f"R²   = {r2:.6f}")
 
-    print(
-
-        f"R²   = {r2:.6f}"
-
-    )
+    print(f"RMSE = {rmse:.6f}")
 
 
-    print(
-
-        f"RMSE = {rmse:.6f}"
-
-    )
-
-
-    print(
-
-        f"MAE  = {mae:.6f}"
-
-    )
+    print(f"MAE  = {mae:.6f}")
