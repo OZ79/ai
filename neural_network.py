@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Callable
 import numpy as np
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import r2_score, root_mean_squared_error, mean_absolute_error
-import matplotlib.pyplot as plt
+
+# ============================================================
+# NEURON
+# ============================================================
 
 class Neuron:
     def __init__(self, weights_count: int, f_activation_n: int = 1):
@@ -58,6 +58,9 @@ class Neuron:
     def prim(self)-> float:
         return self.f_activation_prim(self.z)
 
+# ============================================================
+# LAYER
+# ============================================================
 
 class Layer:
     def __init__(self, inputs_count: int, neurons_count: int, f_activation_n: int = 1):
@@ -77,6 +80,9 @@ class Layer:
     def prims(self)-> np.ndarray:
         return np.array([neuron.prim for neuron in self.neurons])
 
+# ============================================================
+# NEURAL NETWORK
+# ============================================================
 
 class NeuralNetwork:
     def __init__(self, inputs_count:int):
@@ -144,158 +150,3 @@ class NeuralNetwork:
             neuron.wb -= velocity
             neuron.momentum = velocity
 
-
-######################################################################
-
-nn = NeuralNetwork(2)
-nn.add_layer(6)
-nn.add_layer(6)
-nn.add_layer(6)
-nn.add_layer(1,2)
-
-train_X = []
-train_y = []
-
-for _ in range(1500):
-    x1 = np.random.randint(-20, 21)
-    x2 = np.random.randint(-20, 21)
-
-    train_X.append(
-        np.array([x1, x2])
-    )
-
-    train_y.append(
-        np.array([
-            x1 * x2
-        ])
-    )
-
-train_X = np.array(train_X, dtype=float)
-train_y = np.array(train_y, dtype=float)
-
-X_scaler = StandardScaler()
-y_scaler = StandardScaler()
-
-train_X_scaled = X_scaler.fit_transform(train_X)
-train_y_scaled = y_scaler.fit_transform(train_y)
-
-epoch_losses = []
-
-plt.ion()
-
-fig, ax = plt.subplots()
-
-line, = ax.plot([], [])
-
-ax.set_xlabel("Epoch")
-ax.set_ylabel("Loss")
-ax.set_title("Training loss")
-ax.grid()
-
-try:
-    for epoch in range(3000):
-
-        epoch_loss = 0.0
-
-        indices = np.random.permutation(len(train_X_scaled))
-        for i in indices:
-            x = train_X_scaled[i]
-            y = train_y_scaled[i]
-
-            nn.forward(x)
-            nn.backward(y, learning_rate=0.001)
-
-            epoch_loss += nn.loss[-1]
-
-        epoch_loss /= len(train_X)
-        epoch_losses.append(epoch_loss)
-
-        if epoch % 100 == 0:
-            line.set_xdata(range(len(epoch_losses)))
-            line.set_ydata(epoch_losses)
-
-            ax.relim()
-            ax.autoscale_view()
-
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-            plt.pause(0.001)
-
-except KeyboardInterrupt:
-    print("\nНавчання достроково завершено!")
-
-plt.ioff()
-plt.show()
-
-y_pred = []
-y_true = []
-
-test_X = []
-test_y = []
-
-for _ in range(100):
-    x1 = np.random.randint(-20, 20)
-    x2 = np.random.randint(-20, 20)
-
-    test_X.append(
-        np.array([x1, x2], dtype=float)
-    )
-
-    test_y.append(
-        np.array([x1 * x2], dtype=float)
-    )
-
-for x, y in zip(test_X, test_y):
-
-    # масштабування входу
-    x_scaled = X_scaler.transform(
-        x.reshape(1, -1)
-    )
-
-    # прогноз мережі
-    result_scaled = nn.forward(x_scaled[0])
-
-    # повертаємо prediction до початкового масштабу
-    result = y_scaler.inverse_transform(
-        result_scaled.reshape(1, -1)
-    )[0]
-
-    y_pred.append(result)
-    y_true.append(y)
-
-y_pred = np.array(y_pred)
-y_true = np.array(y_true)
-
-r2 = r2_score(y_true, y_pred)
-rmse = root_mean_squared_error(y_true, y_pred)
-mae = mean_absolute_error(y_true, y_pred)
-
-print("R² =", r2)
-print("rmse =", rmse)
-print("MAE =", mae)
-
-results = []
-
-for _ in range(20):
-    x1 = np.random.randint(-20, 20)
-    x2 = np.random.randint(-20, 20)
-
-    x = np.array([[x1, x2]], dtype=float)
-
-    x_scaled = X_scaler.transform(x)
-    result_scaled = nn.forward(x_scaled[0])
-
-    result = y_scaler.inverse_transform(
-        result_scaled.reshape(1, -1)
-    )[0, 0]
-
-    results.append({
-        'x1': x1,
-        'x2': x2,
-        'NN result': result,
-        'x1 * x2': x1 * x2
-    })
-
-df = pd.DataFrame(results)
-
-print(df)
