@@ -16,7 +16,7 @@ def linear(z):
     return z
 
 def relu(z:float) -> float:
-    return max(0, z)
+    return np.maximum(0, z)
 
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
@@ -62,8 +62,14 @@ class Neuron:
         raise ValueError("Unknown activation")
 
     def init(self) -> Neuron:
-        self.wb = np.concatenate([np.random.randn(self.weights_count) * np.sqrt(2 / self.weights_count),[0.0]])
+        if self.activation_fun == ActivationFunc.Relu:
+            scale = np.sqrt(2 / self.weights_count)
+        else:
+            scale = np.sqrt(1 / self.weights_count)
+
+        self.wb = np.concatenate([np.random.randn(self.weights_count) * scale, [0.0]])
         self.momentum = np.zeros_like(self.wb)
+
         return self
 
     def forward(self, input_data:np.ndarray) -> float:
@@ -84,8 +90,9 @@ class Layer:
     def __init__(self, inputs_count: int, neurons_count: int, activation_fun: ActivationFunc = ActivationFunc.Linear):
         self.inputs_count = inputs_count
         self.neurons_count = neurons_count
+        self.activation_fun = activation_fun
         self.neurons = [
-            Neuron(weights_count=inputs_count, activation_fun=activation_fun).init() 
+            Neuron(weights_count=inputs_count, activation_fun=self.activation_fun ).init() 
             for _ in range(0, self.neurons_count)
             ]
         self.output = None
@@ -136,21 +143,27 @@ class NeuralNetwork:
             layer = self.layers[layerNum]
             if layerNum == self.layers_count -1:
                 if lossFunc == LossFunc.MSE:
-                    self.loss.append(np.sum((self.output - train_data) ** 2) * 0.5)
+                    self.loss.append(np.mean((self.output - train_data) ** 2)* 0.5)
                     delta = (self.output - train_data) * layer.derivatives
                 elif lossFunc == LossFunc.BCE:
+                    if layer.activation_fun != ActivationFunc.Sigmoid:
+                        raise ValueError("BCE requires Sigmoid activation in the output layer")
+
                     eps = 1e-15
-                    output = np.clip(self.output, eps, 1 - eps)
-                    self.loss.append(np.sum(-(train_data * np.log(output) + (1 - train_data) * np.log(1 - output))))
-                    delta = ((output - train_data) / (output*(1 - output))) * layer.derivatives
+                    prediction = self.output
+                    clipped_prediction = np.clip(prediction, eps, 1 - eps)
+                    loss = -(train_data * np.log(clipped_prediction) + (1 - train_data) * np.log(1 - clipped_prediction))
+                    self.loss.append(np.mean(loss))
+                    # Sigmoid + BCE
+                    delta = (prediction - train_data)/ prediction.size
             else:
                 layerNext =  self.layers[layerNum + 1]
                 delta = (np.array([neuron.wb[:-1] for neuron in layerNext.neurons]).T  @  delta) * layer.derivatives
             if layerNum == 0:
-                input = np.concatenate([self.input_data, [1]])
+                input_data = np.concatenate([self.input_data, [1]])
             else:
-                input = np.concatenate([self.layers[layerNum -1].output, [1]])
-            gradient = np.outer(delta, input)
+                input_data = np.concatenate([self.layers[layerNum -1].output, [1]])
+            gradient = np.outer(delta, input_data)
             gradients[layerNum] = gradient
 
         for layerNum in range(self.layers_count):
