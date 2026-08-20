@@ -8,43 +8,56 @@ import numpy as np
 # ============================================================
 
 class ActivationFunc(Enum):
-    Relu = "Relu"
-    Linear = "Linear"
+    Relu = "relu"
+    Linear = "linear"
+    Sigmoid = "sigmoid"
+
+def linear(z):
+    return z
+
+def relu(z:float) -> float:
+    return max(0, z)
+
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def linear_derivative(z):
+    return 1.0
+
+def relu_derivative(z:float) -> float:
+    return 1.0 if z > 0 else 0.0
+            
+def sigmoid_derivative(z):
+    return sigmoid(z) * (1 - sigmoid(z))
 
 class Neuron:
-    def __init__(self, weights_count: int, f_activation_n: ActivationFunc = ActivationFunc.Linear):
+    def __init__(self, weights_count: int, activation_fun: ActivationFunc = ActivationFunc.Linear):
         self.weights_count = weights_count
         self.z = None
         self.output = None
-        self.f_activation_n = f_activation_n
+        self.activation_fun = activation_fun
         self.wb = None
         self.momentum = None
 
     @property
     def f_activation(self) -> Callable[[float], float]:
-        def linear(z):
-            return z
-        def relu(z:float) -> float:
-            return max(0, z)
-
-        if self.f_activation_n == ActivationFunc.Linear:
+        if self.activation_fun == ActivationFunc.Linear:
             return linear
-        elif self.f_activation_n == ActivationFunc.Relu:
+        elif self.activation_fun == ActivationFunc.Relu:
             return relu
+        elif self.activation_fun == ActivationFunc.Sigmoid:
+            return sigmoid
 
         raise ValueError("Unknown activation")
 
     @property
-    def f_activation_prim(self) -> Callable[[float], float]:
-        def linear_prime(z):
-            return 1.0
-        def relu_grad(z:float) -> float:
-            return 1.0 if z > 0 else 0.0
-        
-        if self.f_activation_n == ActivationFunc.Linear:
-            return linear_prime
-        elif self.f_activation_n == ActivationFunc.Relu:
-            return relu_grad
+    def f_activation_derivative(self) -> Callable[[float], float]:
+        if self.activation_fun == ActivationFunc.Linear:
+            return linear_derivative
+        elif self.activation_fun == ActivationFunc.Relu:
+            return relu_derivative
+        elif self.activation_fun == ActivationFunc.Sigmoid:
+            return sigmoid_derivative
 
         raise ValueError("Unknown activation")
 
@@ -60,19 +73,19 @@ class Neuron:
         return self.output
 
     @property
-    def prim(self)-> float:
-        return self.f_activation_prim(self.z)
+    def derivative(self)-> float:
+        return self.f_activation_derivative(self.z)
 
 # ============================================================
 # LAYER
 # ============================================================
 
 class Layer:
-    def __init__(self, inputs_count: int, neurons_count: int, f_activation_n: ActivationFunc = ActivationFunc.Linear):
+    def __init__(self, inputs_count: int, neurons_count: int, activation_fun: ActivationFunc = ActivationFunc.Linear):
         self.inputs_count = inputs_count
         self.neurons_count = neurons_count
         self.neurons = [
-            Neuron(weights_count=inputs_count, f_activation_n=f_activation_n).init() 
+            Neuron(weights_count=inputs_count, activation_fun=activation_fun).init() 
             for _ in range(0, self.neurons_count)
             ]
         self.output = None
@@ -82,12 +95,16 @@ class Layer:
         return self.output
 
     @property
-    def prims(self)-> np.ndarray:
-        return np.array([neuron.prim for neuron in self.neurons])
+    def derivatives(self)-> np.ndarray:
+        return np.array([neuron.derivative for neuron in self.neurons])
 
 # ============================================================
 # NEURAL NETWORK
 # ============================================================
+
+class LossFunc(Enum):
+    MSE = "Mean Squared Error"
+    BCE = "Binary Cross-Entropy"
 
 class NeuralNetwork:
     def __init__(self, inputs_count:int):
@@ -98,31 +115,37 @@ class NeuralNetwork:
         self.layers_count = None
         self.loss = []
 
-    def add_layer(self, neurons_count: int, f_activation_n: ActivationFunc = ActivationFunc.Linear):
+    def add_layer(self, neurons_count: int, activation_fun: ActivationFunc = ActivationFunc.Linear):
         if not self.layers:
-            self.layers.append(Layer(self.inputs_count, neurons_count, f_activation_n))
+            self.layers.append(Layer(self.inputs_count, neurons_count, activation_fun))
         else:
-            self.layers.append(Layer(self.layers[-1].neurons_count, neurons_count, f_activation_n))
+            self.layers.append(Layer(self.layers[-1].neurons_count, neurons_count, activation_fun))
         self.layers_count = len(self.layers)
         
     def forward(self, input_data:np.ndarray) -> np.ndarray:
         self.input_data = input_data
-        output = self.input_data;
+        output = self.input_data
         for layer in self.layers:
             output = layer.forward(output)
         self.output = output
         return self.output
 
-    def backward(self, train_data:np.ndarray, learning_rate = 0.01):
+    def backward(self, train_data:np.ndarray, learning_rate = 0.01, lossFunc : LossFunc = LossFunc.MSE):
         gradients = [None] * self.layers_count
         for layerNum in range(self.layers_count -1, -1, -1):
             layer = self.layers[layerNum]
             if layerNum == self.layers_count -1:
-                self.loss.append(np.sum((self.output - train_data) ** 2) * 0.5)
-                delta = (self.output - train_data) * layer.prims
+                if lossFunc == LossFunc.MSE:
+                    self.loss.append(np.sum((self.output - train_data) ** 2) * 0.5)
+                    delta = (self.output - train_data) * layer.derivatives
+                elif lossFunc == LossFunc.BCE:
+                    eps = 1e-15
+                    output = np.clip(self.output, eps, 1 - eps)
+                    self.loss.append(np.sum(-(train_data * np.log(output) + (1 - train_data) * np.log(1 - output))))
+                    delta = ((output - train_data) / (output*(1 - output))) * layer.derivatives
             else:
                 layerNext =  self.layers[layerNum + 1]
-                delta = (np.array([neuron.wb[:-1] for neuron in layerNext.neurons]).T  @  delta) * layer.prims
+                delta = (np.array([neuron.wb[:-1] for neuron in layerNext.neurons]).T  @  delta) * layer.derivatives
             if layerNum == 0:
                 input = np.concatenate([self.input_data, [1]])
             else:

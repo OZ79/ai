@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     nn.add_layer(
         neurons_count=35,
-        f_activation_n= ActivationFunc.Relu,
+        activation_fun= ActivationFunc.Relu,
     )
 
     # ------------------------------------------------------------
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     nn.add_layer(
         neurons_count=35,
-        f_activation_n=ActivationFunc.Relu,
+        activation_fun=ActivationFunc.Relu,
     )
 
     # ------------------------------------------------------------
