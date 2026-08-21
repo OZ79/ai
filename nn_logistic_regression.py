@@ -8,15 +8,12 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from neural_network import ActivationFunc, NeuralNetwork
+from neural_network import ActivationFunc, LossFunc, NeuralNetwork
 
 import matplotlib.pyplot as plt
 
 # Download latest version
 path = kagglehub.dataset_download("shrutisaxena/raisin-dataset")
-
-print("Path to dataset files:", path)
-
 df = pd.read_excel(os.path.join(path, 'Raisin_Dataset.xlsx'))
 
 
@@ -106,13 +103,13 @@ X_test = scaler.transform(X_test)
 #########################################
 
 nn = NeuralNetwork(inputs_count=X_train.shape[1])
-nn.add_layer(neurons_count=1,activation_fun= ActivationFunc.Linear)
+nn.add_layer(neurons_count=32,activation_fun= ActivationFunc.Relu)
 nn.add_layer(neurons_count=1,activation_fun= ActivationFunc.Sigmoid)
 
 #########################################
 
-epochs = 400
-learning_rate = 0.01
+epochs = 160
+learning_rate = 0.0001
 
 epoch_losses = []
 
@@ -144,7 +141,7 @@ for epoch in range(epochs):
         prediction = nn.forward(x)
 
         # Backward
-        nn.backward(target,learning_rate)
+        nn.backward(target,learning_rate,  lossFunc = LossFunc.BCE)
 
         # Loss поточного sample
         epoch_loss.append(nn.loss[-1])
