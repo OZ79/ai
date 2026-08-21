@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # 5. TRAINING PARAMETERS
     # ============================================================
 
-    epochs = 700
+    epochs = 800
     learning_rate = 0.001
     update_every = 1
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     # GRAPH 1 — FUNCTION APPROXIMATION
     # ============================================================
 
-    axes[0].plot(X, y,label="True function: sin(x)",linewidth=2)
+    axes[0].plot(X, y,label="Target function",linewidth=2)
 
     # Початкова апроксимація
     prediction_line, = axes[0].plot(X, np.zeros_like(y),label="Neural network",linewidth=2)

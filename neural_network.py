@@ -3,9 +3,7 @@ from enum import Enum
 from typing import Callable
 import numpy as np
 
-# ============================================================
 # NEURON
-# ============================================================
 
 class ActivationFunc(Enum):
     Relu = "relu"
@@ -82,9 +80,7 @@ class Neuron:
     def derivative(self)-> float:
         return self.f_activation_derivative(self.z)
 
-# ============================================================
 # LAYER
-# ============================================================
 
 class Layer:
     def __init__(self, inputs_count: int, neurons_count: int, activation_fun: ActivationFunc = ActivationFunc.Linear):
@@ -105,9 +101,7 @@ class Layer:
     def derivatives(self)-> np.ndarray:
         return np.array([neuron.derivative for neuron in self.neurons])
 
-# ============================================================
 # NEURAL NETWORK
-# ============================================================
 
 class LossFunc(Enum):
     MSE = "Mean Squared Error"
