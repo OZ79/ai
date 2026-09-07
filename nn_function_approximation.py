@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # 5. TRAINING PARAMETERS
     # ============================================================
 
-    epochs = 800
+    epochs = 1200
     learning_rate = 0.001
     update_every = 1
 

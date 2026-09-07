@@ -169,18 +169,13 @@ class NeuralNetwork:
         max_norm = 1.0
 
         for i, neuron in enumerate(layer.neurons):
-
             gradient = gradients[i]
-
             norm = np.linalg.norm(gradient)
 
             if norm > max_norm:
                 gradient = gradient * (max_norm / norm)
 
-            velocity = (
-                momentum * neuron.momentum
-                + learning_rate * gradient
-            )
+            velocity = momentum * neuron.momentum + learning_rate * gradient
 
             neuron.wb -= velocity
             neuron.momentum = velocity
