@@ -176,7 +176,7 @@ class NeuralNetwork:
                 gradient = gradient * (max_norm / norm)
 
             velocity = momentum * neuron.momentum + learning_rate * gradient
-
+            
             neuron.wb -= velocity
             neuron.momentum = velocity
 
