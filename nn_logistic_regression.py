@@ -4,7 +4,7 @@ import kagglehub
 import numpy as np
 import pandas as pd
 from sklearn.feature_selection import mutual_info_classif
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
@@ -141,7 +141,7 @@ for epoch in range(epochs):
         prediction = nn.forward(x)
 
         # Backward
-        nn.backward(target,learning_rate,  lossFunc = LossFunc.BCE)
+        nn.backward(target, learning_rate,  lossFunc = LossFunc.BCE)
 
         # Loss поточного sample
         epoch_loss.append(nn.loss[-1])
@@ -213,3 +213,17 @@ print(
         zero_division=0
     )
 )
+
+# ROC-AUC
+fpr, tpr, thresholds = roc_curve(y_test, prediction)
+auc = roc_auc_score(y_test, prediction)
+
+plt.plot(fpr, tpr, label=f"ROC-AUC = {auc:.3f}")
+plt.plot([0, 1], [0, 1], linestyle="--")
+
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.legend()
+plt.show()
+
+
