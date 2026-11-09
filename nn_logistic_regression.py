@@ -103,7 +103,8 @@ X_test = scaler.transform(X_test)
 #########################################
 
 nn = NeuralNetwork(inputs_count=X_train.shape[1])
-nn.add_layer(neurons_count=32,activation_fun= ActivationFunc.Relu)
+nn.add_layer(neurons_count=16,activation_fun= ActivationFunc.Relu)
+nn.add_layer(neurons_count=8,activation_fun= ActivationFunc.Relu)
 nn.add_layer(neurons_count=1,activation_fun= ActivationFunc.Sigmoid)
 
 #########################################
